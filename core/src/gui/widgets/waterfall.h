@@ -132,6 +132,8 @@ namespace ImGui {
 
         void setBandPlanPos(int pos);
 
+        double getHoveredOffset();
+
         bool centerFreqMoved = false;
         bool vfoFreqChanged = false;
         bool bandplanEnabled = false;

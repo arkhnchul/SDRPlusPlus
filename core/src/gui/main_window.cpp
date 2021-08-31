@@ -573,22 +573,44 @@ void MainWindow::draw() {
         // Handle scrollwheel
         int wheel = ImGui::GetIO().MouseWheel;
         if (wheel != 0 && (gui::waterfall.mouseInFFT || gui::waterfall.mouseInWaterfall)) {
-            double nfreq;
-            if (vfo != NULL) {
-                nfreq = gui::waterfall.getCenterFrequency() + vfo->generalOffset + (vfo->snapInterval * wheel);
-                nfreq = roundl(nfreq / vfo->snapInterval) * vfo->snapInterval;
+            if (!(ImGui::IsKeyDown(GLFW_KEY_LEFT_CONTROL) || ImGui::IsKeyDown(GLFW_KEY_RIGHT_CONTROL))) {
+                double nfreq;
+                if (vfo != NULL) {
+                    nfreq = gui::waterfall.getCenterFrequency() + vfo->generalOffset + (vfo->snapInterval * wheel);
+                    nfreq = roundl(nfreq / vfo->snapInterval) * vfo->snapInterval;
+                }
+                else {
+                    nfreq = gui::waterfall.getCenterFrequency() - (gui::waterfall.getViewBandwidth() * wheel / 20.0);
+                }
+                tuner::tune(tuningMode, gui::waterfall.selectedVFO, nfreq);
+                gui::freqSelect.setFrequency(nfreq);
+                core::configManager.acquire();
+                core::configManager.conf["frequency"] = gui::waterfall.getCenterFrequency();
+                if (vfo != NULL) {
+                    core::configManager.conf["vfoOffsets"][gui::waterfall.selectedVFO] = vfo->generalOffset;
+                }
+                core::configManager.release(true);
+            } else {
+                // Zoom implementation
+                float bwNew;
+                if (wheel < 0) {
+                    bwNew = bw * 1.3 * (-wheel);
+                } else {
+                    bwNew = bw / (1.3 * wheel);
+                }
+                if (bwNew < 1000.0)
+                    bwNew = 1000.0;
+                else if (bwNew > gui::waterfall.getBandwidth())
+                    bwNew = gui::waterfall.getBandwidth();
+
+                double viewOffsetOld = gui::waterfall.getViewOffset();
+                double mouseOffset = gui::waterfall.getHoveredOffset();
+                double viewOffsetNew = mouseOffset - ((mouseOffset - viewOffsetOld) * bwNew) / bw;
+
+                bw = bwNew;
+                gui::waterfall.setViewBandwidth(bw);
+                gui::waterfall.setViewOffset(viewOffsetNew);
             }
-            else {
-                nfreq = gui::waterfall.getCenterFrequency() - (gui::waterfall.getViewBandwidth() * wheel / 20.0);
-            }
-            tuner::tune(tuningMode, gui::waterfall.selectedVFO, nfreq);
-            gui::freqSelect.setFrequency(nfreq);
-            core::configManager.acquire();
-            core::configManager.conf["frequency"] = gui::waterfall.getCenterFrequency();
-            if (vfo != NULL) {
-                core::configManager.conf["vfoOffsets"][gui::waterfall.selectedVFO] = vfo->generalOffset;
-            }
-            core::configManager.release(true);
         }
     }
     

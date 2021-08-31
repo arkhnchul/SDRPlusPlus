@@ -510,6 +510,16 @@ namespace ImGui {
         }
     }
 
+    double WaterFall::getHoveredOffset() {
+        double off = 0.0;
+        ImVec2 mousePos = ImGui::GetMousePos();
+        int refCenter = mousePos.x - (widgetPos.x + 50);
+        if (refCenter >= 0 && refCenter < dataWidth) {
+            off = ((((double) refCenter / ((double) dataWidth / 2.0)) - 1.0) * (viewBandwidth / 2.0)) + viewOffset;
+        }
+        return off;
+    }
+
     bool WaterFall::calculateVFOSignalInfo(float* fftLine, WaterfallVFO* _vfo, float& strength, float& snr) {
         if (fftLine == NULL || fftLines <= 0) { return false; }
 
