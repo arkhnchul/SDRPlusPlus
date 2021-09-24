@@ -367,7 +367,7 @@
             "end": 118000000
         },
         {
-            "name": "Aviation - Voie",
+            "name": "Aviation - Voix",
             "type": "aviation",
             "start": 118000000,
             "end": 137000000
@@ -403,7 +403,7 @@
             "end": 380000000
         },
         {
-            "name": "Satelitte militAviatione",
+            "name": "Satellite militaire",
             "type": "military",
             "start": 240000000,
             "end": 270000000
