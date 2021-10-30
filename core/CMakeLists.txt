@@ -1,22 +1,30 @@
 cmake_minimum_required(VERSION 3.13)
 project(sdrpp_core)
 
-# Set compiler options
-if (MSVC)
-    set(CMAKE_CXX_FLAGS "-O2 /std:c++17 /EHsc")
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "-O3 -std=c++17 -Wno-unused-command-line-argument -undefined dynamic_lookup")
-else ()
-    set(CMAKE_CXX_FLAGS "-O3 -std=c++17")
-endif ()
-add_definitions(-DSDRPP_IS_CORE)
+if (USE_INTERNAL_LIBCORRECT)
+    add_subdirectory("libcorrect/")
+endif (USE_INTERNAL_LIBCORRECT)
 
 # Main code
 file(GLOB_RECURSE SRC "src/*.cpp" "src/*.c")
 
+add_definitions(-DSDRPP_IS_CORE)
+if (MSVC)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif ()
+
 # Add code to dyn lib
 add_library(sdrpp_core SHARED ${SRC})
+
+# Set compiler options
+if (MSVC)
+    target_compile_options(sdrpp_core PRIVATE /O2 /Ob2 /std:c++17 /EHsc)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(sdrpp_core PRIVATE -O3 -std=c++17)
+else ()
+    target_compile_options(sdrpp_core PRIVATE -O3 -std=c++17)
+endif ()
+
 
 # Set the install prefix
 target_compile_definitions(sdrpp_core PUBLIC INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
@@ -25,8 +33,14 @@ target_compile_definitions(sdrpp_core PUBLIC INSTALL_PREFIX="${CMAKE_INSTALL_PRE
 target_include_directories(sdrpp_core PUBLIC "src/")
 target_include_directories(sdrpp_core PUBLIC "src/imgui")
 
+# Link to libcorrect
+if (USE_INTERNAL_LIBCORRECT)
+    target_include_directories(sdrpp_core PUBLIC "libcorrect/include")
+    target_link_libraries(sdrpp_core PUBLIC correct_static)
+endif (USE_INTERNAL_LIBCORRECT)
+
 if (OPT_OVERRIDE_STD_FILESYSTEM)
-target_include_directories(sdrpp_core PUBLIC "std_replacement")
+    target_include_directories(sdrpp_core PUBLIC "std_replacement")
 endif (OPT_OVERRIDE_STD_FILESYSTEM)
 
 if (MSVC)
@@ -69,7 +83,7 @@ else()
         ${GLFW3_INCLUDE_DIRS}
         ${VOLK_INCLUDE_DIRS}
     )
-
+    
     target_link_directories(sdrpp_core PUBLIC
         ${GLEW_LIBRARY_DIRS}
         ${FFTW3_LIBRARY_DIRS}
@@ -85,20 +99,22 @@ else()
         ${VOLK_LIBRARIES}
     )
 
+    if (NOT USE_INTERNAL_LIBCORRECT)
+        pkg_check_modules(CORRECT REQUIRED libcorrect)
+        target_include_directories(sdrpp_core PUBLIC ${CORRECT_INCLUDE_DIRS})
+        target_link_directories(sdrpp_core PUBLIC ${CORRECT_LIBRARY_DIRS})
+        target_link_libraries(sdrpp_core PUBLIC ${CORRECT_LIBRARIES})
+    endif (NOT USE_INTERNAL_LIBCORRECT)
+
     if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         target_link_libraries(sdrpp_core PUBLIC stdc++fs)
-    endif ()
-
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
     endif ()
 
 endif ()
 
 set(CORE_FILES ${RUNTIME_OUTPUT_DIRECTORY} PARENT_SCOPE)
 
-# cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/Users/Alex/vcpkg/scripts/buildsystems/vcpkg.cmake" -G "Visual Studio 15 2017 Win64"
+# cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
 # Install directives
 install(TARGETS sdrpp_core DESTINATION lib)

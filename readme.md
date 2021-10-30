@@ -10,10 +10,12 @@ SDR++ is a cross-platform and open source SDR software with the aim of being blo
 
 ## Features
 
+* Multi VFO
 * Wide hardware support (both through SoapySDR and dedicated modules)
 * SIMD accelerated DSP
 * Cross-platform (Windows, Linux, OSX and BSD)
 * Full waterfall update when possible. Makes browsing signals easier and more pleasant
+* Modular design (easily write your own plugins)
 
 # Installing
 
@@ -48,7 +50,50 @@ There are currently no existing packages for other distributions, for these syst
 
 ## MacOS
 
-TODO
+You might get lucky by using the installer downloadable from [the Releases page](https://github.com/AlexandreRouma/SDRPlusPlus/releases).
+
+### Building it yourself
+
+This guide requires you to have Homebrew installed. Check out https://brew.sh/ on how to do so.
+
+Get yourself a copy of the source code. This can be done by downloading the
+source package from [the Releases
+page](https://github.com/AlexandreRouma/SDRPlusPlus/releases). Extract it to a
+location of your choice. Alternativley you can clone
+https://github.com/AlexandreRouma/SDRPlusPlus.git using git.
+
+```sh
+brew install \
+  airspy \
+  airspyhf \
+  cmake \
+  codec2 \
+  fftw \
+  glew \
+  glfw \
+  hackrf \
+  libbladerf \
+  librtlsdr \
+  portaudio \
+  rtl-sdr \
+  soapyrtlsdr \
+  volk
+mkdir build
+cd build
+cmake .. \
+  -DOPT_BUILD_AUDIO_SINK=OFF \
+  -DOPT_BUILD_BLADERF_SOURCE=OFF \
+  -DOPT_BUILD_M17_DECODER=ON \
+  -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON \
+  -DOPT_BUILD_PLUTOSDR_SOURCE=OFF \
+  -DOPT_BUILD_PORTAUDIO_SINK=ON \
+  -DOPT_BUILD_SOAPY_SOURCE=OFF
+make -j$(sysctl -n hw.ncpu)
+```
+
+The above was tested on macOS Big Sur (11.5).
+
+Check `jobs.build_macos` in the [build_all.yaml](https://github.com/AlexandreRouma/SDRPlusPlus/blob/master/.github/workflows/build_all.yml) workflow for the exact options used for building the package available in the [releases](https://github.com/AlexandreRouma/SDRPlusPlus/releases/tag/1.0.3)
 
 ## BSD
 
@@ -295,6 +340,7 @@ Modules in beta are still included in releases for the most part but not enabled
 | Name                | Stage      | Dependencies | Option                        | Built by default| Built in Release | Enabled in SDR++ by default |
 |---------------------|------------|--------------|-------------------------------|:---------------:|:----------------:|:---------------------------:|
 | falcon9_decoder     | Unfinished | ffplay       | OPT_BUILD_FALCON9_DECODER     | ⛔              | ⛔              | ⛔                         |
+| m17_decoder         | Beta       | -            | OPT_BUILD_M17_DECODER         | ⛔              | ✅              | ⛔                         |
 | meteor_demodulator  | Working    | -            | OPT_BUILD_METEOR_DEMODULATOR  | ✅              | ✅              | ⛔                         |
 | radio               | Working    | -            | OPT_BUILD_RADIO               | ✅              | ✅              | ✅                         |
 | weather_sat_decoder | Unfinished | -            | OPT_BUILD_WEATHER_SAT_DECODER | ⛔              | ⛔              | ⛔                         |
@@ -354,18 +400,23 @@ I will soon publish a contributing.md listing the code style to use.
 ## Patrons
 
 * Bob Logan
+* [Christian Häusler](https://github.com/corvus-ch)
 * Croccydile
+* Dale L Puckett (K0HYD)
 * [Daniele D'Agnelli](https://linkedin.com/in/dagnelli)
+* D. Jones
 * [EB3FRN](https://www.eb3frn.net/)
 * Eric Johnson
 * Flinger Films
-* [W4IPA](https://twitter.com/W4IPAstroke5)
+* Kezza
 * Lee Donaghy
+* .lozenge. (Hank Hill)
 * ON4MU
 * [Passion-Radio.com](https://passion-radio.com/)
 * [Scanner School](https://scannerschool.com/)
 * [SignalsEverywhere](https://signalseverywhere.com/)
 * Syne Ardwin (WI9SYN)
+* [W4IPA](https://twitter.com/W4IPAstroke5)
 
 ## Contributors
 
@@ -377,6 +428,7 @@ I will soon publish a contributing.md listing the code style to use.
 * [Cropinghigh](https://github.com/cropinghigh)
 * [Fred F4EED](http://f4eed.wordpress.com/)
 * [Howard0su](https://github.com/howard0su)
+* John Donkersley
 * [Joshua Kimsey](https://github.com/JoshuaKimsey)
 * [Martin Hauke](https://github.com/mnhauke)
 * [Marvin Sinister](https://github.com/marvin-sinister)

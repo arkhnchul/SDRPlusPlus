@@ -30,8 +30,8 @@ inline void doZoom(int offset, int width, int outWidth, float* data, float* out,
     if (offset < 0) {
         offset = 0;
     }
-    if (width > 65535) {
-        width = 65535;
+    if (width > 524288) {
+        width = 524288;
     }
 
     float factor = (float)width / (float)outWidth;
@@ -1255,6 +1255,9 @@ namespace ImGui {
 
     void WaterFall::showWaterfall() {
         buf_mtx.lock();
+        if (rawFFTs ==  NULL) {
+            spdlog::error("Null rawFFT");
+        }
         waterfallVisible = true;
         onResize();
         memset(rawFFTs, 0, waterfallHeight * rawFFTSize * sizeof(float));
