@@ -7,6 +7,7 @@
 #include <gui/main_window.h>
 #include <signal_path/signal_path.h>
 #include <gui/style.h>
+#include <utils/optionlist.h>
 
 namespace displaymenu {
     bool showWaterfall;
@@ -18,6 +19,12 @@ namespace displaymenu {
     std::string colorMapAuthor = "";
     int selectedWindow = 0;
     int fftRate = 20;
+    int uiScaleId = 0;
+    bool restartRequired = false;
+    bool fftHold = false;
+    int fftHoldSpeed = 60;
+
+    OptionList<float, float> uiScales;
 
     const int FFTSizes[] = {
         524288,
@@ -33,17 +40,21 @@ namespace displaymenu {
     };
 
     const char* FFTSizesStr = "524288\0"
-                            "262144\0"
-                            "131072\0"
-                            "65536\0"
-                            "32768\0"
-                            "16384\0"
-                            "8192\0"
-                            "4096\0"
-                            "2048\0"
-                            "1024\0";
+                              "262144\0"
+                              "131072\0"
+                              "65536\0"
+                              "32768\0"
+                              "16384\0"
+                              "8192\0"
+                              "4096\0"
+                              "2048\0"
+                              "1024\0";
 
     int fftSizeId = 0;
+
+    void updateFFTHoldSpeed() {
+        gui::waterfall.setFFTHoldSpeed(fftHoldSpeed / (fftRate * 10.0f));
+    }
 
     void init() {
         showWaterfall = core::configManager.conf["showWaterfall"];
@@ -70,7 +81,7 @@ namespace displaymenu {
         fullWaterfallUpdate = core::configManager.conf["fullWaterfallUpdate"];
         gui::waterfall.setFullWaterfallUpdate(fullWaterfallUpdate);
 
-        fftSizeId = 0;
+        fftSizeId = 3;
         int fftSize = core::configManager.conf["fftSize"];
         for (int i = 0; i < 7; i++) {
             if (fftSize == FFTSizes[i]) {
@@ -83,13 +94,27 @@ namespace displaymenu {
         fftRate = core::configManager.conf["fftRate"];
         sigpath::signalPath.setFFTRate(fftRate);
 
-        selectedWindow = std::clamp<int>((int)core::configManager.conf["fftWindow"], 0, _FFT_WINDOW_COUNT-1);
+        selectedWindow = std::clamp<int>((int)core::configManager.conf["fftWindow"], 0, _FFT_WINDOW_COUNT - 1);
         gui::mainWindow.setFFTWindow(selectedWindow);
+
+        gui::menu.locked = core::configManager.conf["lockMenuOrder"];
+
+        fftHold = core::configManager.conf["fftHold"];
+        fftHoldSpeed = core::configManager.conf["fftHoldSpeed"];
+        gui::waterfall.setFFTHold(fftHold);
+        updateFFTHoldSpeed();
+
+        // Define and load UI scales
+        uiScales.define(1.0f, "100%", 1.0f);
+        uiScales.define(2.0f, "200%", 2.0f);
+        uiScales.define(3.0f, "300%", 3.0f);
+        uiScales.define(4.0f, "400%", 4.0f);
+        uiScaleId = uiScales.valueId(style::uiScale);
     }
 
     void draw(void* ctx) {
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
-        bool homePressed = ImGui::IsKeyPressed(GLFW_KEY_HOME, false);
+        float menuWidth = ImGui::GetContentRegionAvail().x;
+        bool homePressed = ImGui::IsKeyPressed(ImGuiKey_Home, false);
         if (ImGui::Checkbox("Show Waterfall##_sdrpp", &showWaterfall) || homePressed) {
             if (homePressed) { showWaterfall = !showWaterfall; }
             showWaterfall ? gui::waterfall.showWaterfall() : gui::waterfall.hideWaterfall();
@@ -112,11 +137,43 @@ namespace displaymenu {
             core::configManager.release(true);
         }
 
+        if (ImGui::Checkbox("Lock Menu Order##_sdrpp", &gui::menu.locked)) {
+            core::configManager.acquire();
+            core::configManager.conf["lockMenuOrder"] = gui::menu.locked;
+            core::configManager.release(true);
+        }
+
+        if (ImGui::Checkbox("FFT Hold##_sdrpp", &fftHold)) {
+            gui::waterfall.setFFTHold(fftHold);
+            core::configManager.acquire();
+            core::configManager.conf["fftHold"] = fftHold;
+            core::configManager.release(true);
+        }
+
+        ImGui::LeftLabel("FFT Hold Speed");
+        ImGui::FillWidth();
+        if (ImGui::InputInt("##sdrpp_fft_hold_speed", &fftHoldSpeed)) {
+            updateFFTHoldSpeed();
+            core::configManager.acquire();
+            core::configManager.conf["fftHoldSpeed"] = fftHoldSpeed;
+            core::configManager.release(true);
+        }
+
+        ImGui::LeftLabel("High-DPI Scaling");
+        ImGui::FillWidth();
+        if (ImGui::Combo("##sdrpp_ui_scale", &uiScaleId, uiScales.txt)) {
+            core::configManager.acquire();
+            core::configManager.conf["uiScale"] = uiScales[uiScaleId];
+            core::configManager.release(true);
+            restartRequired = true;
+        }
+
         ImGui::LeftLabel("FFT Framerate");
         ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
         if (ImGui::InputInt("##sdrpp_fft_rate", &fftRate, 1, 10)) {
             fftRate = std::max<int>(1, fftRate);
             sigpath::signalPath.setFFTRate(fftRate);
+            updateFFTHoldSpeed();
             core::configManager.acquire();
             core::configManager.conf["fftRate"] = fftRate;
             core::configManager.release(true);
@@ -154,6 +211,8 @@ namespace displaymenu {
             ImGui::Text("Color map Author: %s", colorMapAuthor.c_str());
         }
 
-        
+        if (restartRequired) {
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Restart required.");
+        }
     }
 }

@@ -5,7 +5,6 @@
 #include <signal_path/signal_path.h>
 #include <wavreader.h>
 #include <core.h>
-#include <options.h>
 #include <gui/widgets/file_select.h>
 #include <filesystem>
 #include <regex>
@@ -13,7 +12,7 @@
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "file_source",
     /* Description:     */ "Wav file source module for SDR++",
     /* Author:          */ "Ryzerth",
@@ -23,10 +22,12 @@ SDRPP_MOD_INFO {
 
 ConfigManager config;
 
-class FileSourceModule : public ModuleManager::Instance  {
+class FileSourceModule : public ModuleManager::Instance {
 public:
-    FileSourceModule(std::string name) : fileSelect("", {"Wav IQ Files (*.wav)", "*.wav", "All Files", "*"}) {
+    FileSourceModule(std::string name) : fileSelect("", { "Wav IQ Files (*.wav)", "*.wav", "All Files", "*" }) {
         this->name = name;
+
+        if (core::args["server"].b()) { return; }
 
         config.acquire();
         fileSelect.setPath(config.conf["path"], true);
@@ -82,7 +83,7 @@ private:
         gui::waterfall.centerFrequencyLocked = false;
         spdlog::info("FileSourceModule '{0}': Menu Deselect!", _this->name);
     }
-    
+
     static void start(void* ctx) {
         FileSourceModule* _this = (FileSourceModule*)ctx;
         if (_this->running) { return; }
@@ -91,7 +92,7 @@ private:
         _this->workerThread = _this->float32Mode ? std::thread(floatWorker, _this) : std::thread(worker, _this);
         spdlog::info("FileSourceModule '{0}': Start!", _this->name);
     }
-    
+
     static void stop(void* ctx) {
         FileSourceModule* _this = (FileSourceModule*)ctx;
         if (!_this->running) { return; }
@@ -103,12 +104,12 @@ private:
         _this->reader->rewind();
         spdlog::info("FileSourceModule '{0}': Stop!", _this->name);
     }
-    
+
     static void tune(double freq, void* ctx) {
         FileSourceModule* _this = (FileSourceModule*)ctx;
         spdlog::info("FileSourceModule '{0}': Tune: {1}!", _this->name, freq);
     }
-    
+
     static void menuHandler(void* ctx) {
         FileSourceModule* _this = (FileSourceModule*)ctx;
 
@@ -198,7 +199,7 @@ private:
 MOD_EXPORT void _INIT_() {
     json def = json({});
     def["path"] = "";
-    config.setPath(options::opts.root + "/file_source_config.json");
+    config.setPath(core::args["root"].s() + "/file_source_config.json");
     config.load(def);
     config.enableAutoSave();
 }

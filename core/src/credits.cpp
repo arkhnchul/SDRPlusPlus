@@ -28,11 +28,22 @@ namespace sdrpp_credits {
     const char* libraries[] = {
         "Dear ImGui (ocornut)",
         "fftw3 (fftw.org)",
-        "glew (Nigel Stewart)",
         "glfw (Camilla Löwy)",
         "json (nlohmann)",
         "spdlog (gabime)",
         "Portable File Dialogs"
+    };
+
+    const char* hardwareDonators[] = {
+        "Airspy",
+        "Analog Devices",
+        "CaribouLabs",
+        "Howard Su",
+        "MyriadRF",
+        "Nuand",
+        "RFspace",
+        "RTL-SDRblog",
+        "SDRplay"
     };
 
     const char* patrons[] = {
@@ -44,19 +55,27 @@ namespace sdrpp_credits {
         "D. Jones",
         "EB3FRN",
         "Eric Johnson",
+        "Ernest Murphy (NH7L)",
         "Flinger Films",
+        "gringogrigio",
+        "Joe Cupano",
         "Kezza",
+        "Krys Kamieniecki",
         "Lee Donaghy",
+        "Lee KD1SQ",
         ".lozenge. (Hank Hill)",
         "ON4MU",
         "Passion-Radio.com",
+        "Paul Maine",
         "Scanner School",
         "SignalsEverywhere",
         "Syne Ardwin (WI9SYN)",
-        "W4IPA"
+        "W4IPA",
+        "Zipper"
     };
 
     const int contributorCount = sizeof(contributors) / sizeof(char*);
     const int libraryCount = sizeof(libraries) / sizeof(char*);
+    const int hardwareDonatorCount = sizeof(hardwareDonators) / sizeof(char*);
     const int patronCount = sizeof(patrons) / sizeof(char*);
 }

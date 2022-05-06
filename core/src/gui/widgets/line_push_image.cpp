@@ -15,7 +15,6 @@ namespace ImGui {
 
         ImGuiWindow* window = GetCurrentWindow();
         ImGuiStyle& style = GetStyle();
-        float pad = style.FramePadding.y;
         ImVec2 min = window->DC.CursorPos;
 
         // Calculate scale
@@ -23,8 +22,7 @@ namespace ImGui {
         float height = roundf((width / (float)_frameWidth) * (float)_lineCount);
 
         ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), height);
-        ImRect bb(min, ImVec2(min.x+size.x, min.y+size.y));
-        float lineHeight = size.y;
+        ImRect bb(min, ImVec2(min.x + size.x, min.y + size.y));
 
         // If there are no lines, there is no point in drawing anything
         if (_lineCount == 0) { return; }
@@ -38,7 +36,7 @@ namespace ImGui {
             newData = false;
             updateTexture();
         }
-        
+
         window->DrawList->AddImage((void*)(intptr_t)textureId, min, ImVec2(min.x + width, min.y + height));
     }
 
@@ -48,7 +46,7 @@ namespace ImGui {
         int oldLineCount = _lineCount;
         _lineCount += count;
 
-        // If new data either fills up or excedes the limit, reallocate
+        // If new data either fills up or exceeds the limit, reallocate
         // TODO: Change it to avoid bug if count >= reservedIncrement
         if (_lineCount > reservedCount) {
             printf("Reallocating\n");

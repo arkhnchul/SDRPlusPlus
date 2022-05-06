@@ -8,12 +8,12 @@
 #include <dsp/processing.h>
 #include <spdlog/spdlog.h>
 #include <config.h>
-#include <options.h>
 #include <gui/style.h>
+#include <core.h>
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "network_sink",
     /* Description:     */ "Network sink module for SDR++",
     /* Author:          */ "Ryzerth",
@@ -61,7 +61,7 @@ public:
         s2m.init(&packer.out);
         monoSink.init(&s2m.out, monoHandler, this);
         stereoSink.init(&packer.out, stereoHandler, this);
-        
+
 
         // Create a list of sample rates
         for (int sr = 12000; sr < 200000; sr += 12000) {
@@ -83,11 +83,17 @@ public:
             sprintf(buffer, "%d", (int)sr);
             sampleRatesTxt += buffer;
             sampleRatesTxt += '\0';
-            if (sr == sampleRate) { srId = id; found = true; }
+            if (sr == sampleRate) {
+                srId = id;
+                found = true;
+            }
             if (sr == 48000.0) { _48kId = id; }
             id++;
         }
-        if (!found) { srId = _48kId; sampleRate = 48000.0; }
+        if (!found) {
+            srId = _48kId;
+            sampleRate = 48000.0;
+        }
         _stream->setSampleRate(sampleRate);
 
         // Start if needed
@@ -116,7 +122,7 @@ public:
     }
 
     void menuHandler() {
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
+        float menuWidth = ImGui::GetContentRegionAvail().x;
 
         bool listening = (listener && listener->isListening()) || (conn && conn->isOpen());
 
@@ -176,7 +182,7 @@ public:
             config.release(true);
         }
 
-        ImGui::Text("Status:");
+        ImGui::TextUnformatted("Status:");
         ImGui::SameLine();
         if (conn && conn->isOpen()) {
             ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (modeId == SINK_MODE_TCP) ? "Connected" : "Sending");
@@ -185,7 +191,7 @@ public:
             ImGui::TextColored(ImVec4(1.0, 1.0, 0.0, 1.0), "Listening");
         }
         else {
-            ImGui::Text("Idle");
+            ImGui::TextUnformatted("Idle");
         }
     }
 
@@ -220,7 +226,7 @@ private:
             conn = net::openUDP("0.0.0.0", port, hostname, port, false);
         }
     }
-    
+
     void stopServer() {
         if (conn) { conn->close(); }
         if (listener) { listener->close(); }
@@ -230,10 +236,10 @@ private:
         NetworkSink* _this = (NetworkSink*)ctx;
         std::lock_guard lck(_this->connMtx);
         if (!_this->conn || !_this->conn->isOpen()) { return; }
-        
+
         volk_32f_s32f_convert_16i(_this->netBuf, (float*)samples, 32768.0f, count);
 
-        _this->conn->write(count*sizeof(int16_t), (uint8_t*)_this->netBuf);
+        _this->conn->write(count * sizeof(int16_t), (uint8_t*)_this->netBuf);
     }
 
     static void stereoHandler(dsp::stereo_t* samples, int count, void* ctx) {
@@ -241,9 +247,9 @@ private:
         std::lock_guard lck(_this->connMtx);
         if (!_this->conn || !_this->conn->isOpen()) { return; }
 
-        volk_32f_s32f_convert_16i(_this->netBuf, (float*)samples, 32768.0f, count*2);
+        volk_32f_s32f_convert_16i(_this->netBuf, (float*)samples, 32768.0f, count * 2);
 
-        _this->conn->write(count*2*sizeof(int16_t), (uint8_t*)_this->netBuf);
+        _this->conn->write(count * 2 * sizeof(int16_t), (uint8_t*)_this->netBuf);
     }
 
     static void clientHandler(net::Conn client, void* ctx) {
@@ -259,12 +265,11 @@ private:
             _this->conn->close();
         }
         else {
-            
         }
 
         _this->listener->acceptAsync(clientHandler, _this);
     }
-    
+
     SinkManager::Stream* _stream;
     dsp::Packer<dsp::stereo_t> packer;
     dsp::StereoToMono s2m;
@@ -291,7 +296,6 @@ private:
     net::Listener listener;
     net::Conn conn;
     std::mutex connMtx;
-
 };
 
 class NetworkSinkModule : public ModuleManager::Instance {
@@ -331,12 +335,11 @@ private:
     std::string name;
     bool enabled = true;
     SinkManager::SinkProvider provider;
-
 };
 
 MOD_EXPORT void _INIT_() {
     json def = json({});
-    config.setPath(options::opts.root + "/network_sink_config.json");
+    config.setPath(core::args["root"].s() + "/network_sink_config.json");
     config.load(def);
     config.enableAutoSave();
 }

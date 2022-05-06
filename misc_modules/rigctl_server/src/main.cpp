@@ -8,14 +8,13 @@
 #include <recorder_interface.h>
 #include <meteor_demodulator_interface.h>
 #include <config.h>
-#include <options.h>
 #include <cctype>
 #include <radio_interface.h>
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-#define MAX_COMMAND_LENGTH      8192
+#define MAX_COMMAND_LENGTH 8192
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "rigctl_server",
     /* Description:     */ "My fancy new module",
     /* Author:          */ "Ryzerth",
@@ -107,7 +106,7 @@ public:
 private:
     static void menuHandler(void* ctx) {
         SigctlServerModule* _this = (SigctlServerModule*)ctx;
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
+        float menuWidth = ImGui::GetContentRegionAvail().x;
 
         bool listening = (_this->listener && _this->listener->isListening());
 
@@ -139,7 +138,7 @@ private:
                 config.release(true);
             }
         }
-        
+
         ImGui::LeftLabel("Controlled Recorder");
         ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
         {
@@ -175,7 +174,7 @@ private:
             config.conf[_this->name]["autoStart"] = _this->autoStart;
             config.release(true);
         }
-        
+
         if (listening && ImGui::Button(CONCAT("Stop##_rigctl_srv_stop_", _this->name), ImVec2(menuWidth, 0))) {
             _this->stopServer();
         }
@@ -183,7 +182,7 @@ private:
             _this->startServer();
         }
 
-        ImGui::Text("Status:");
+        ImGui::TextUnformatted("Status:");
         ImGui::SameLine();
         if (_this->client && _this->client->isOpen()) {
             ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), "Connected");
@@ -192,7 +191,7 @@ private:
             ImGui::TextColored(ImVec4(1.0, 1.0, 0.0, 1.0), "Listening");
         }
         else {
-            ImGui::Text("Idle");
+            ImGui::TextUnformatted("Idle");
         }
     }
 
@@ -247,7 +246,7 @@ private:
             selectVfoByName(vfoNames[0]);
             return;
         }
-        
+
         // Select the VFO
         {
             if (lock) { std::lock_guard lck(vfoMtx); }
@@ -271,8 +270,8 @@ private:
         }
 
         std::string type = core::modComManager.getModuleName(_name);
-        
-        
+
+
         // Select the VFO
         {
             if (lock) { std::lock_guard lck(recorderMtx); }
@@ -310,7 +309,7 @@ private:
         //spdlog::info("New client!");
 
         _this->client = std::move(_client);
-        _this->client->readAsync(1024, _this->dataBuf, dataHandler, _this);
+        _this->client->readAsync(1024, _this->dataBuf, dataHandler, _this, false);
         _this->client->waitForEnd();
         _this->client->close();
 
@@ -331,7 +330,7 @@ private:
             if (_this->command.size() < MAX_COMMAND_LENGTH) { _this->command += (char)data[i]; }
         }
 
-        _this->client->readAsync(1024, _this->dataBuf, dataHandler, _this);
+        _this->client->readAsync(1024, _this->dataBuf, dataHandler, _this, false);
     }
 
     void commandHandler(std::string cmd) {
@@ -483,7 +482,7 @@ private:
                     core::modComManager.callInterface(selectedVfo, RADIO_IFACE_CMD_SET_BANDWIDTH, &newBandwidth, NULL);
                 }
             }
-            
+
             client->write(resp.size(), (uint8_t*)resp.c_str());
         }
         else if (parts[0] == "m" || parts[0] == "\\get_mode") {
@@ -493,7 +492,7 @@ private:
             if (!selectedVfo.empty() && core::modComManager.getModuleName(selectedVfo) == "radio") {
                 int mode;
                 core::modComManager.callInterface(selectedVfo, RADIO_IFACE_CMD_GET_MODE, NULL, &mode);
-                
+
                 if (mode == RADIO_IFACE_MODE_NFM) {
                     resp = "FM\n";
                 }
@@ -613,6 +612,12 @@ private:
         else if (parts[0] == "q" || parts[0] == "\\quit") {
             // Will close automatically
         }
+        else if (parts[0] == "\\start") {
+            gui::mainWindow.setPlayState(true);
+        }
+        else if (parts[0] == "\\stop") {
+            gui::mainWindow.setPlayState(false);
+        }
         else if (parts[0] == "\\dump_state") {
             std::lock_guard lck(vfoMtx);
             resp =
@@ -678,7 +683,7 @@ private:
                 /* Bit field list of get level */
                 "0x40000020\n" /* RIG_LEVEL_SQL | RIG_LEVEL_STRENGTH */
                 /* Bit field list of set level */
-                "0x20\n"       /* RIG_LEVEL_SQL */
+                "0x20\n" /* RIG_LEVEL_SQL */
                 /* Bit field list of get parm */
                 "0\n" /* RIG_PARM_NONE */
                 /* Bit field list of set parm */
@@ -728,7 +733,7 @@ private:
 };
 
 MOD_EXPORT void _INIT_() {
-    config.setPath(options::opts.root + "/rigctl_server_config.json");
+    config.setPath(core::args["root"].s() + "/rigctl_server_config.json");
     config.load(json::object());
     config.enableAutoSave();
 }

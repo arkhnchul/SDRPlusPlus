@@ -6,13 +6,12 @@
 #include <core.h>
 #include <gui/style.h>
 #include <config.h>
-#include <options.h>
 #include <gui/widgets/stepped_slider.h>
 #include <libsddc.h>
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "sddc_source",
     /* Description:     */ "SDDC source module for SDR++",
     /* Author:          */ "Ryzerth;pkuznetsov",
@@ -28,6 +27,8 @@ class AirspyHFSourceModule : public ModuleManager::Instance {
 public:
     AirspyHFSourceModule(std::string name) {
         this->name = name;
+
+        if (core::args["server"].b()) { return; }
 
         sampleRate = 768000.0;
 
@@ -142,7 +143,7 @@ private:
         AirspyHFSourceModule* _this = (AirspyHFSourceModule*)ctx;
         spdlog::info("AirspyHFSourceModule '{0}': Menu Deselect!", _this->name);
     }
-    
+
     static void start(void* ctx) {
         AirspyHFSourceModule* _this = (AirspyHFSourceModule*)ctx;
         if (_this->running) { return; }
@@ -153,19 +154,19 @@ private:
         _this->running = true;
         spdlog::info("AirspyHFSourceModule '{0}': Start!", _this->name);
     }
-    
+
     static void stop(void* ctx) {
         AirspyHFSourceModule* _this = (AirspyHFSourceModule*)ctx;
         if (!_this->running) { return; }
         _this->running = false;
         _this->stream.stopWriter();
-        
+
         // Stop device
 
         _this->stream.clearWriteStop();
         spdlog::info("AirspyHFSourceModule '{0}': Stop!", _this->name);
     }
-    
+
     static void tune(double freq, void* ctx) {
         AirspyHFSourceModule* _this = (AirspyHFSourceModule*)ctx;
         if (_this->running) {
@@ -174,10 +175,10 @@ private:
         _this->freq = freq;
         spdlog::info("AirspyHFSourceModule '{0}': Tune: {1}!", _this->name, freq);
     }
-    
+
     static void menuHandler(void* ctx) {
         AirspyHFSourceModule* _this = (AirspyHFSourceModule*)ctx;
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
+        float menuWidth = ImGui::GetContentRegionAvail().x;
 
         if (_this->running) { style::beginDisabled(); }
 
@@ -202,7 +203,6 @@ private:
         if (_this->running) { style::endDisabled(); }
 
         // All other controls
-
     }
 
     std::string name;
@@ -228,7 +228,7 @@ MOD_EXPORT void _INIT_() {
     json def = json({});
     def["devices"] = json({});
     def["device"] = "";
-    config.setPath(options::opts.root + "/sddc_config.json");
+    config.setPath(core::args["root"].s() + "/sddc_config.json");
     config.load(def);
     config.enableAutoSave();
 }

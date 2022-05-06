@@ -4,10 +4,11 @@
 #include <gui/widgets/bandplan.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
-#include <GL/glew.h>
 #include <utils/event.h>
 
-#define WATERFALL_RESOLUTION    1000000
+#include <utils/opengl_include_code.h>
+
+#define WATERFALL_RESOLUTION 1000000
 
 namespace ImGui {
     class WaterfallVFO {
@@ -17,6 +18,8 @@ namespace ImGui {
         void setBandwidth(double bw);
         void setReference(int ref);
         void setSnapInterval(double interval);
+        void setNotchOffset(double offset);
+        void setNotchVisible(bool visible);
         void updateDrawingVars(double viewBandwidth, float dataWidth, double viewOffset, ImVec2 widgetPos, int fftHeight); // NOTE: Datawidth double???
         void draw(ImGuiWindow* window, bool selected);
 
@@ -34,6 +37,9 @@ namespace ImGui {
         double bandwidth;
         double snapInterval = 5000;
         int reference = REF_CENTER;
+
+        double notchOffset = 0;
+        bool notchVisible = false;
 
         bool leftClamped;
         bool rightClamped;
@@ -54,6 +60,8 @@ namespace ImGui {
         ImVec2 wfLbwSelMax;
         ImVec2 wfRbwSelMin;
         ImVec2 wfRbwSelMax;
+        ImVec2 notchMin;
+        ImVec2 notchMax;
 
         bool centerOffsetChanged = false;
         bool lowerOffsetChanged = false;
@@ -69,6 +77,7 @@ namespace ImGui {
         ImU32 color = IM_COL32(255, 255, 255, 50);
 
         Event<double> onUserChangedBandwidth;
+        Event<double> onUserChangedNotch;
     };
 
     class WaterFall {
@@ -80,6 +89,41 @@ namespace ImGui {
         void draw();
         float* getFFTBuffer();
         void pushFFT();
+
+        inline void doZoom(int offset, int width, int outWidth, float* data, float* out, bool fast) {
+            // NOTE: REMOVE THAT SHIT, IT'S JUST A HACKY FIX
+            if (offset < 0) {
+                offset = 0;
+            }
+            if (width > 524288) {
+                width = 524288;
+            }
+
+            float factor = (float)width / (float)outWidth;
+
+            if (fast) {
+                for (int i = 0; i < outWidth; i++) {
+                    out[i] = data[(int)(offset + ((float)i * factor))];
+                }
+            }
+            else {
+                float sFactor = ceilf(factor);
+                float uFactor;
+                float id = offset;
+                float maxVal;
+                int sId;
+                for (int i = 0; i < outWidth; i++) {
+                    maxVal = -INFINITY;
+                    sId = (int)id;
+                    uFactor = (sId + sFactor > rawFFTSize) ? sFactor - ((sId + sFactor) - rawFFTSize) : sFactor;
+                    for (int j = 0; j < uFactor; j++) {
+                        if (data[sId + j] > maxVal) { maxVal = data[sId + j]; }
+                    }
+                    out[i] = maxVal;
+                    id += factor;
+                }
+            }
+        }
 
         void updatePallette(float colors[][3], int colorCount);
         void updatePalletteFromArray(float* colors, int colorCount);
@@ -124,7 +168,7 @@ namespace ImGui {
         void setFFTHeight(int height);
         int getFFTHeight();
 
-        void setRawFFTSize(int size, bool lock = true);
+        void setRawFFTSize(int size);
 
         void setFastFFT(bool fastFFT);
 
@@ -133,6 +177,9 @@ namespace ImGui {
         void setBandPlanPos(int pos);
 
         double getHoveredOffset();
+
+        void setFFTHold(bool hold);
+        void setFFTHoldSpeed(float speed);
 
         bool centerFreqMoved = false;
         bool vfoFreqChanged = false;
@@ -194,6 +241,13 @@ namespace ImGui {
             _BANDPLAN_POS_COUNT
         };
 
+        ImVec2 fftAreaMin;
+        ImVec2 fftAreaMax;
+        ImVec2 freqAreaMin;
+        ImVec2 freqAreaMax;
+        ImVec2 wfMin;
+        ImVec2 wfMax;
+
     private:
         void drawWaterfall();
         void drawFFT();
@@ -210,7 +264,7 @@ namespace ImGui {
         bool waterfallUpdate = false;
 
         uint32_t waterfallPallet[WATERFALL_RESOLUTION];
-        
+
         ImVec2 widgetPos;
         ImVec2 widgetEndPos;
         ImVec2 widgetSize;
@@ -218,27 +272,20 @@ namespace ImGui {
         ImVec2 lastWidgetPos;
         ImVec2 lastWidgetSize;
 
-        ImVec2 fftAreaMin;
-        ImVec2 fftAreaMax;
-        ImVec2 freqAreaMin;
-        ImVec2 freqAreaMax;
-        ImVec2 wfMin;
-        ImVec2 wfMax;
-
         ImGuiWindow* window;
 
         GLuint textureId;
 
-        std::mutex buf_mtx;
+        std::recursive_mutex buf_mtx;
 
         float vRange;
 
         int maxVSteps;
         int maxHSteps;
 
-        int dataWidth;              // Width of the FFT and waterfall
-        int fftHeight;              // Height of the fft graph
-        int waterfallHeight = 0;    // Height of the waterfall
+        int dataWidth;           // Width of the FFT and waterfall
+        int fftHeight;           // Height of the fft graph
+        int waterfallHeight = 0; // Height of the waterfall
 
         double viewBandwidth;
         double viewOffset;
@@ -265,6 +312,7 @@ namespace ImGui {
         int rawFFTSize;
         float* rawFFTs = NULL;
         float* latestFFT;
+        float* latestFFTHold;
         int currentFFTLine = 0;
         int fftLines = 0;
 
@@ -281,6 +329,9 @@ namespace ImGui {
         bool _fullUpdate = true;
 
         int bandPlanPos = BANDPLAN_POS_BOTTOM;
+
+        bool fftHold = false;
+        float fftHoldSpeed = 0.3f;
 
         // UI Select elements
         bool fftResizeSelect = false;

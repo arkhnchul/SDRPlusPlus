@@ -4,7 +4,6 @@
 #include <gui/style.h>
 #include <signal_path/signal_path.h>
 #include <module.h>
-#include <options.h>
 #include <gui/gui.h>
 #include <dsp/pll.h>
 #include <dsp/stream.h>
@@ -23,9 +22,9 @@
 
 #include <fstream>
 
-#define CONCAT(a, b)    ((std::string(a) + b).c_str())
+#define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "falcon9_decoder",
     /* Description:     */ "Falcon9 telemetry decoder for SDR++",
     /* Author:          */ "Ryzerth",
@@ -33,7 +32,7 @@ SDRPP_MOD_INFO {
     /* Max instances    */ -1
 };
 
-#define INPUT_SAMPLE_RATE   6000000
+#define INPUT_SAMPLE_RATE 6000000
 
 std::ofstream file("output.ts");
 
@@ -84,7 +83,6 @@ public:
     }
 
     ~Falcon9DecoderModule() {
-        
     }
 
     void postInit() {}
@@ -132,7 +130,7 @@ private:
     static void menuHandler(void* ctx) {
         Falcon9DecoderModule* _this = (Falcon9DecoderModule*)ctx;
 
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
+        float menuWidth = ImGui::GetContentRegionAvail().x;
 
         if (!_this->enabled) { style::beginDisabled(); }
 
@@ -187,10 +185,9 @@ private:
         Falcon9DecoderModule* _this = (Falcon9DecoderModule*)ctx;
 
         uint16_t length = (((data[0] & 0b1111) << 8) | data[1]) + 2;
-        uint64_t pktId =    ((uint64_t)data[2] << 56) | ((uint64_t)data[3] << 48) | ((uint64_t)data[4] << 40) | ((uint64_t)data[5] << 32)
-                        |   ((uint64_t)data[6] << 24) | ((uint64_t)data[7] << 16) | ((uint64_t)data[8] << 8) | data[9];
+        uint64_t pktId = ((uint64_t)data[2] << 56) | ((uint64_t)data[3] << 48) | ((uint64_t)data[4] << 40) | ((uint64_t)data[5] << 32) | ((uint64_t)data[6] << 24) | ((uint64_t)data[7] << 16) | ((uint64_t)data[8] << 8) | data[9];
 
-        if (pktId == 0x0117FE0800320303 || pktId == 0x0112FA0800320303) { 
+        if (pktId == 0x0117FE0800320303 || pktId == 0x0112FA0800320303) {
             data[length - 2] = 0;
             _this->logsMtx.lock();
             _this->gpsLogs += (char*)(data + 25);
@@ -207,13 +204,13 @@ private:
     static void symSinkHandler(float* data, int count, void* ctx) {
         Falcon9DecoderModule* _this = (Falcon9DecoderModule*)ctx;
         float* buf = _this->symDiag.acquireBuffer();
-        memcpy(buf, data, 1024*sizeof(float));
+        memcpy(buf, data, 1024 * sizeof(float));
         _this->symDiag.releaseBuffer();
     }
 
     std::string name;
     bool enabled = true;
-    
+
     bool logsVisible = false;
 
     std::mutex logsMtx;
@@ -232,7 +229,7 @@ private:
     dsp::stream<float> thrInput;
     dsp::Threshold thr;
 
-    uint8_t syncWord[32] = {0,0,0,1,1,0,1,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,0,1};
+    uint8_t syncWord[32] = { 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1 };
     dsp::Deframer deframe;
     dsp::FalconRS falconRS;
     dsp::FalconPacketSync pkt;
@@ -243,7 +240,6 @@ private:
     VFOManager::VFO* vfo;
 
     ImGui::SymbolDiagram symDiag;
-
 };
 
 MOD_EXPORT void _INIT_() {

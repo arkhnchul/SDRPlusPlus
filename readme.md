@@ -7,6 +7,8 @@ SDR++ is a cross-platform and open source SDR software with the aim of being blo
 
 * [Patreon](https://patreon.com/ryzerth)
 * [Discord Server](https://discord.gg/aFgWjyD)
+* [Reddit](https://www.reddit.com/r/sdrpp/)
+* IRC: `#sdrpp` ([libera.chat](https://libera.chat)) __**NO LONGER ACTIVE, JOIN DISCORD INSTEAD**__
 
 ## Features
 
@@ -34,7 +36,7 @@ Download the latest release from [the Releases page](https://github.com/Alexandr
 Then, run:
 
 ```sh
-sudo apt install libfftw3-dev libglfw3-dev libglew-dev libvolk2-dev libsoapysdr-dev libairspyhf-dev libiio-dev libad9361-dev librtaudio-dev libhackrf-dev
+sudo apt install libfftw3-dev libglfw3-dev libvolk2-dev libsoapysdr-dev libairspyhf-dev libiio-dev libad9361-dev librtaudio-dev libhackrf-dev
 sudo dpkg -i sdrpp_debian_amd64.deb
 ```
 
@@ -69,7 +71,6 @@ brew install \
   cmake \
   codec2 \
   fftw \
-  glew \
   glfw \
   hackrf \
   libbladerf \
@@ -77,7 +78,8 @@ brew install \
   portaudio \
   rtl-sdr \
   soapyrtlsdr \
-  volk
+  volk \
+  zstd
 mkdir build
 cd build
 cmake .. \
@@ -114,7 +116,7 @@ After this, install the following dependencies using vcpkg:
 
 * fftw3
 * glfw3
-* glew
+* zstd
 
 You are probably going to build in 64 bit so make sure vcpkg installs the correct versions using `.\vcpkg.exe install <package>:x64-windows`
 
@@ -220,8 +222,8 @@ you can disable it using the module parameter listed in the table below
 * cmake
 * fftw3
 * glfw
-* glew
 * libvolk
+* zstd
 
 Next install dependencies based on the modules you wish to build (See previous step)
 
@@ -407,16 +409,23 @@ I will soon publish a contributing.md listing the code style to use.
 * D. Jones
 * [EB3FRN](https://www.eb3frn.net/)
 * Eric Johnson
+* Ernest Murphy (NH7L)
 * Flinger Films
+* gringogrigio
+* Joe Cupano
 * Kezza
+* Krys Kamieniecki
 * Lee Donaghy
+* Lee KD1SQ
 * .lozenge. (Hank Hill)
 * ON4MU
 * [Passion-Radio.com](https://passion-radio.com/)
+* Paul Maine
 * [Scanner School](https://scannerschool.com/)
 * [SignalsEverywhere](https://signalseverywhere.com/)
 * Syne Ardwin (WI9SYN)
 * [W4IPA](https://twitter.com/W4IPAstroke5)
+* [Zipper](github.com/reppiZ)
 
 ## Contributors
 
@@ -441,6 +450,7 @@ I will soon publish a contributing.md listing the code style to use.
 * [Szymon Zakrent](https://github.com/zakrent)
 * [Tobias Mädel](https://github.com/Manawyrm)
 * [Zimm](https://github.com/invader-zimm)
+
 
 ## Libraries used
 

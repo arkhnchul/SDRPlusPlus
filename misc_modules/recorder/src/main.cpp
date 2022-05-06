@@ -13,13 +13,12 @@
 #include <gui/style.h>
 #include <gui/widgets/volume_meter.h>
 #include <regex>
-#include <options.h>
 #include <gui/widgets/folder_select.h>
 #include <recorder_interface.h>
 #include <core.h>
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "recorder",
     /* Description:     */ "Recorder module for SDR++",
     /* Author:          */ "Ryzerth",
@@ -29,16 +28,12 @@ SDRPP_MOD_INFO {
 
 ConfigManager config;
 
-std::string expandString(std::string input) {
-    input = std::regex_replace(input, std::regex("%ROOT%"), options::opts.root);
-    return std::regex_replace(input, std::regex("//"), "/");
-}
-
 std::string genFileName(std::string prefix, bool isVfo, std::string name = "") {
     time_t now = time(0);
-    tm *ltm = localtime(&now);
+    tm* ltm = localtime(&now);
     char buf[1024];
-    double freq = gui::waterfall.getCenterFrequency();;
+    double freq = gui::waterfall.getCenterFrequency();
+    ;
     if (isVfo && gui::waterfall.vfos.find(name) != gui::waterfall.vfos.end()) {
         freq += gui::waterfall.vfos[name]->generalOffset;
     }
@@ -49,27 +44,35 @@ std::string genFileName(std::string prefix, bool isVfo, std::string name = "") {
 class RecorderModule : public ModuleManager::Instance {
 public:
     RecorderModule(std::string name) : folderSelect("%ROOT%/recordings") {
-        this->name = name;        
+        this->name = name;
+
+        root = (std::string)core::args["root"];
 
         // Load config
         config.acquire();
         bool created = false;
-        
+
         // Create config if it doesn't exist
         if (!config.conf.contains(name)) {
             config.conf[name]["mode"] = RECORDER_MODE_AUDIO;
             config.conf[name]["recPath"] = "%ROOT%/recordings";
             config.conf[name]["audioStream"] = "Radio";
+            config.conf[name]["audioVolume"] = 1.0;
             created = true;
+        }
+
+        if (!config.conf[name].contains("audioVolume")) {
+            config.conf[name]["audioVolume"] = 1.0;
         }
 
         recMode = config.conf[name]["mode"];
         folderSelect.setPath(config.conf[name]["recPath"]);
         selectedStreamName = config.conf[name]["audioStream"];
+        audioVolume = config.conf[name]["audioVolume"];
         config.release(created);
 
         // Init audio path
-        vol.init(&dummyStream, 1.0f);
+        vol.init(&dummyStream, audioVolume);
         audioSplit.init(&vol.out);
         audioSplit.bindStream(&meterStream);
         meter.init(&meterStream);
@@ -102,7 +105,7 @@ public:
         std::lock_guard lck(recMtx);
         gui::menu.removeEntry(name);
         core::modComManager.unregisterInterface(name);
-        
+
         // Stop recording
         if (recording) { stopRecording(); }
 
@@ -150,7 +153,7 @@ private:
         streamNamesTxt = "";
 
         // If there are no stream, cancel
-        if (names.size() == 0) {return; }
+        if (names.size() == 0) { return; }
 
         // List streams
         for (auto const& name : names) {
@@ -186,7 +189,7 @@ private:
 
     static void menuHandler(void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
-        float menuColumnWidth = ImGui::GetContentRegionAvailWidth();
+        float menuColumnWidth = ImGui::GetContentRegionAvail().x;
 
         // Recording mode
         if (_this->recording) { style::beginDisabled(); }
@@ -243,7 +246,7 @@ private:
             }
             uint64_t seconds = samplesWritten / (uint64_t)sampleRate;
             time_t diff = seconds;
-            tm *dtm = gmtime(&diff);
+            tm* dtm = gmtime(&diff);
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Recording %02d:%02d:%02d", dtm->tm_hour, dtm->tm_min, dtm->tm_sec);
         }
         if (!folderSelect.pathIsValid()) { style::endDisabled(); }
@@ -278,6 +281,9 @@ private:
 
         if (ImGui::SliderFloat(CONCAT("##_recorder_vol_", name), &audioVolume, 0, 1, "")) {
             vol.setVolume(audioVolume);
+            config.acquire();
+            config.conf[name]["audioVolume"] = audioVolume;
+            config.release(true);
         }
         ImGui::PopItemWidth();
 
@@ -296,22 +302,22 @@ private:
             }
             uint64_t seconds = samplesWritten / (uint64_t)sampleRate;
             time_t diff = seconds;
-            tm *dtm = gmtime(&diff);
+            tm* dtm = gmtime(&diff);
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Recording %02d:%02d:%02d", dtm->tm_hour, dtm->tm_min, dtm->tm_sec);
         }
         if (!folderSelect.pathIsValid() || selectedStreamName == "") { style::endDisabled(); }
     }
 
-    static void _audioHandler(dsp::stereo_t *data, int count, void *ctx) {
+    static void _audioHandler(dsp::stereo_t* data, int count, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
-        volk_32f_s32f_convert_16i(_this->wavSampleBuf, (float*)data, 32767.0f, count*2);
+        volk_32f_s32f_convert_16i(_this->wavSampleBuf, (float*)data, 32767.0f, count * 2);
         _this->audioWriter->writeSamples(_this->wavSampleBuf, count * 2 * sizeof(int16_t));
         _this->samplesWritten += count;
     }
 
-    static void _basebandHandler(dsp::complex_t *data, int count, void *ctx) {
+    static void _basebandHandler(dsp::complex_t* data, int count, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
-        volk_32f_s32f_convert_16i(_this->wavSampleBuf, (float*)data, 32767.0f, count*2);
+        volk_32f_s32f_convert_16i(_this->wavSampleBuf, (float*)data, 32767.0f, count * 2);
         _this->basebandWriter->writeSamples(_this->wavSampleBuf, count * 2 * sizeof(int16_t));
         _this->samplesWritten += count;
     }
@@ -355,7 +361,7 @@ private:
         else if (recMode == RECORDER_MODE_AUDIO) {
             if (selectedStreamName.empty()) {
                 spdlog::error("Cannot record with no selected stream");
-            } 
+            }
             samplesWritten = 0;
             std::string expandedPath = expandString(folderSelect.path + genFileName("/audio_", true, selectedStreamName));
             sampleRate = sigpath::sinkManager.getStreamSampleRate(selectedStreamName);
@@ -389,7 +395,7 @@ private:
         }
     }
 
-    static void onStreamRegistered(std::string name, void* ctx){
+    static void onStreamRegistered(std::string name, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
         _this->refreshStreams();
 
@@ -414,7 +420,7 @@ private:
         }
     }
 
-    static void onStreamUnregister(std::string name, void* ctx){
+    static void onStreamUnregister(std::string name, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
         if (name != _this->selectedStreamName) { return; }
         if (_this->recording) { _this->stopRecording(); }
@@ -425,7 +431,7 @@ private:
         }
     }
 
-    static void onStreamUnregistered(std::string name, void* ctx){
+    static void onStreamUnregistered(std::string name, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
         _this->refreshStreams();
 
@@ -452,6 +458,11 @@ private:
         }
     }
 
+    std::string expandString(std::string input) {
+        input = std::regex_replace(input, std::regex("%ROOT%"), root);
+        return std::regex_replace(input, std::regex("//"), "/");
+    }
+
 
     std::string name;
     bool enabled = true;
@@ -467,7 +478,7 @@ private:
     float lvlR = -90.0f;
 
     dsp::stream<dsp::stereo_t> dummyStream;
-    
+
     std::mutex recMtx;
 
     FolderSelect folderSelect;
@@ -486,6 +497,7 @@ private:
     std::string streamNamesTxt;
     int streamId = 0;
     std::string selectedStreamName = "";
+    std::string root;
 
     // Baseband path
     dsp::stream<dsp::complex_t> basebandStream;
@@ -498,7 +510,6 @@ private:
     EventHandler<std::string> streamRegisteredHandler;
     EventHandler<std::string> streamUnregisterHandler;
     EventHandler<std::string> streamUnregisteredHandler;
-
 };
 
 struct RecorderContext_t {
@@ -507,14 +518,15 @@ struct RecorderContext_t {
 
 MOD_EXPORT void _INIT_() {
     // Create default recording directory
-    if (!std::filesystem::exists(options::opts.root + "/recordings")) {
+    std::string root = (std::string)core::args["root"];
+    if (!std::filesystem::exists(root + "/recordings")) {
         spdlog::warn("Recordings directory does not exist, creating it");
-        if (!std::filesystem::create_directory(options::opts.root + "/recordings")) {
+        if (!std::filesystem::create_directory(root + "/recordings")) {
             spdlog::error("Could not create recordings directory");
         }
     }
     json def = json({});
-    config.setPath(options::opts.root + "/recorder_config.json");
+    config.setPath(root + "/recorder_config.json");
     config.load(def);
     config.enableAutoSave();
 }

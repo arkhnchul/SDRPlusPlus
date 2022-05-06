@@ -21,7 +21,7 @@ namespace bandplanmenu {
         if (bandplan::bandplans.find(core::configManager.conf["bandPlan"]) != bandplan::bandplans.end()) {
             std::string name = core::configManager.conf["bandPlan"];
             bandplanId = std::distance(bandplan::bandplanNames.begin(), std::find(bandplan::bandplanNames.begin(),
-                                    bandplan::bandplanNames.end(), name));
+                                                                                  bandplan::bandplanNames.end(), name));
             gui::waterfall.bandplan = &bandplan::bandplans[name];
         }
         else {
@@ -35,7 +35,7 @@ namespace bandplanmenu {
     }
 
     void draw(void* ctx) {
-        float menuColumnWidth = ImGui::GetContentRegionAvailWidth();
+        float menuColumnWidth = ImGui::GetContentRegionAvail().x;
         ImGui::PushItemWidth(menuColumnWidth);
         if (ImGui::Combo("##_bandplan_name_", &bandplanId, bandplan::bandplanNameTxt.c_str())) {
             gui::waterfall.bandplan = &bandplan::bandplans[bandplan::bandplanNames[bandplanId]];

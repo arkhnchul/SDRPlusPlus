@@ -4,7 +4,7 @@
 #include <map>
 #include <module.h>
 
-#define MAX_MENU_COUNT      1024
+#define MAX_MENU_COUNT 1024
 
 class Menu {
 public:
@@ -27,9 +27,12 @@ public:
 
     std::vector<MenuOption_t> order;
 
+    bool locked = false;
+
 private:
     bool isInOrderList(std::string name);
 
+    
     bool menuClicked = false;
     std::string clickedMenuName = "";
     std::string draggedMenuName = "";

@@ -6,18 +6,18 @@
 #include <core.h>
 #include <gui/style.h>
 #include <config.h>
-#include <options.h>
 #include <gui/widgets/stepped_slider.h>
 #include <libbladeRF.h>
 #include <dsp/processing.h>
+#include <gui/smgui.h>
 #include <algorithm>
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-#define NUM_BUFFERS     128
-#define NUM_TRANSFERS   1
+#define NUM_BUFFERS   128
+#define NUM_TRANSFERS 1
 
-SDRPP_MOD_INFO {
+SDRPP_MOD_INFO{
     /* Name:            */ "bladerf_source",
     /* Description:     */ "BladeRF source module for SDR++",
     /* Author:          */ "Ryzerth",
@@ -100,11 +100,13 @@ public:
 
     void selectFirst() {
         if (devCount > 0) { selectByInfo(&devInfoList[0]); }
-        else { selectedSerial = ""; }
+        else {
+            selectedSerial = "";
+        }
     }
 
     void selectBySerial(std::string serial, bool reloadChannelId = true) {
-        if (serial == "") { 
+        if (serial == "") {
             selectFirst();
             return;
         }
@@ -134,10 +136,10 @@ public:
 
         // Get the board type
         const char* bname = bladerf_get_board_name(openDev);
-        if (!strcmp(bname ,"bladerf1")) {
+        if (!strcmp(bname, "bladerf1")) {
             selectedBladeType = BLADERF_TYPE_V1;
         }
-        else if (!strcmp(bname ,"bladerf2")) {
+        else if (!strcmp(bname, "bladerf2")) {
             selectedBladeType = BLADERF_TYPE_V2;
         }
         else {
@@ -154,9 +156,13 @@ public:
                 if (config.conf["devices"][info->serial].contains("channelId")) {
                     chanId = config.conf["devices"][info->serial]["channelId"];
                 }
-                else { chanId = 0; }
+                else {
+                    chanId = 0;
+                }
             }
-            else { chanId = 0; }
+            else {
+                chanId = 0;
+            }
             config.release();
         }
 
@@ -203,7 +209,7 @@ public:
         channelNamesTxt = "";
         char buf[32];
         for (int i = 0; i < channelCount; i++) {
-            sprintf(buf, "RX %d", i+1);
+            sprintf(buf, "RX %d", i + 1);
             channelNamesTxt += buf;
             channelNamesTxt += '\0';
         }
@@ -338,7 +344,7 @@ private:
         BladeRFSourceModule* _this = (BladeRFSourceModule*)ctx;
         spdlog::info("BladeRFSourceModule '{0}': Menu Deselect!", _this->name);
     }
-    
+
     static void start(void* ctx) {
         BladeRFSourceModule* _this = (BladeRFSourceModule*)ctx;
         if (_this->running) { return; }
@@ -361,8 +367,7 @@ private:
         // Setup device parameters
         bladerf_set_sample_rate(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->sampleRate, NULL);
         bladerf_set_frequency(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->freq);
-        bladerf_set_bandwidth(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), (_this->bwId == _this->bandwidths.size()) ? 
-                            std::clamp<uint64_t>(_this->sampleRate, _this->bwRange->min, _this->bwRange->max) : _this->bandwidths[_this->bwId], NULL);
+        bladerf_set_bandwidth(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), (_this->bwId == _this->bandwidths.size()) ? std::clamp<uint64_t>(_this->sampleRate, _this->bwRange->min, _this->bwRange->max) : _this->bandwidths[_this->bwId], NULL);
         bladerf_set_gain_mode(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->gainModes[_this->gainMode].mode);
 
         if (_this->selectedBladeType == BLADERF_TYPE_V2) {
@@ -373,7 +378,7 @@ private:
         if (_this->gainModes[_this->gainMode].mode == BLADERF_GAIN_MANUAL) {
             bladerf_set_gain(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->overallGain);
         }
-        
+
         _this->streamingEnabled = true;
 
         // Setup synchronous transfer
@@ -387,7 +392,7 @@ private:
 
         spdlog::info("BladeRFSourceModule '{0}': Start!", _this->name);
     }
-    
+
     static void stop(void* ctx) {
         BladeRFSourceModule* _this = (BladeRFSourceModule*)ctx;
         if (!_this->running) { return; }
@@ -399,7 +404,7 @@ private:
         if (_this->workerThread.joinable()) {
             _this->workerThread.join();
         }
-        
+
         // Disable streaming
         bladerf_enable_module(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), false);
 
@@ -409,7 +414,7 @@ private:
         _this->stream.clearWriteStop();
         spdlog::info("BladeRFSourceModule '{0}': Stop!", _this->name);
     }
-    
+
     static void tune(double freq, void* ctx) {
         BladeRFSourceModule* _this = (BladeRFSourceModule*)ctx;
         _this->freq = freq;
@@ -418,15 +423,15 @@ private:
         }
         spdlog::info("BladeRFSourceModule '{0}': Tune: {1}!", _this->name, freq);
     }
-    
+
     static void menuHandler(void* ctx) {
         BladeRFSourceModule* _this = (BladeRFSourceModule*)ctx;
-        float menuWidth = ImGui::GetContentRegionAvailWidth();
 
-        if (_this->running) { style::beginDisabled(); }
+        if (_this->running) { SmGui::BeginDisabled(); }
 
-        ImGui::SetNextItemWidth(menuWidth);
-        if (ImGui::Combo(CONCAT("##_balderf_dev_sel_", _this->name), &_this->devId, _this->devListTxt.c_str())) {
+        SmGui::FillWidth();
+        SmGui::ForceSync();
+        if (SmGui::Combo(CONCAT("##_balderf_dev_sel_", _this->name), &_this->devId, _this->devListTxt.c_str())) {
             bladerf_devinfo info = _this->devInfoList[_this->devId];
             _this->selectByInfo(&info);
             core::setInputSampleRate(_this->sampleRate);
@@ -435,7 +440,7 @@ private:
             config.release(true);
         }
 
-        if (ImGui::Combo(CONCAT("##_balderf_sr_sel_", _this->name), &_this->srId, _this->sampleRatesTxt.c_str())) {
+        if (SmGui::Combo(CONCAT("##_balderf_sr_sel_", _this->name), &_this->srId, _this->sampleRatesTxt.c_str())) {
             _this->sampleRate = _this->sampleRates[_this->srId];
             core::setInputSampleRate(_this->sampleRate);
             if (_this->selectedSerial != "") {
@@ -446,9 +451,10 @@ private:
         }
 
         // Refresh button
-        ImGui::SameLine();
-        float refreshBtnWdith = menuWidth - ImGui::GetCursorPosX();
-        if (ImGui::Button(CONCAT("Refresh##_balderf_refr_", _this->name), ImVec2(refreshBtnWdith, 0))) {
+        SmGui::SameLine();
+        SmGui::FillWidth();
+        SmGui::ForceSync();
+        if (SmGui::Button(CONCAT("Refresh##_balderf_refr_", _this->name))) {
             _this->refresh();
             _this->selectBySerial(_this->selectedSerial, false);
             core::setInputSampleRate(_this->sampleRate);
@@ -456,9 +462,9 @@ private:
 
         // Channel selection (only show if more than one channel)
         if (_this->channelCount > 1) {
-            ImGui::LeftLabel("RX Channel");
-            ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-            ImGui::Combo(CONCAT("##_balderf_ch_sel_", _this->name), &_this->chanId, _this->channelNamesTxt.c_str());
+            SmGui::LeftLabel("RX Channel");
+            SmGui::FillWidth();
+            SmGui::Combo(CONCAT("##_balderf_ch_sel_", _this->name), &_this->chanId, _this->channelNamesTxt.c_str());
             if (_this->selectedSerial != "") {
                 config.acquire();
                 config.conf["devices"][_this->selectedSerial]["channelId"] = _this->chanId;
@@ -466,14 +472,13 @@ private:
             }
         }
 
-        if (_this->running) { style::endDisabled(); }
+        if (_this->running) { SmGui::EndDisabled(); }
 
-        ImGui::LeftLabel("Bandwidth");
-        ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-        if (ImGui::Combo(CONCAT("##_balderf_bw_sel_", _this->name), &_this->bwId, _this->bandwidthsTxt.c_str())) {
+        SmGui::LeftLabel("Bandwidth");
+        SmGui::FillWidth();
+        if (SmGui::Combo(CONCAT("##_balderf_bw_sel_", _this->name), &_this->bwId, _this->bandwidthsTxt.c_str())) {
             if (_this->running) {
-                bladerf_set_bandwidth(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), (_this->bwId == _this->bandwidths.size()) ? 
-                            std::clamp<uint64_t>(_this->sampleRate, _this->bwRange->min, _this->bwRange->max) : _this->bandwidths[_this->bwId], NULL);
+                bladerf_set_bandwidth(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), (_this->bwId == _this->bandwidths.size()) ? std::clamp<uint64_t>(_this->sampleRate, _this->bwRange->min, _this->bwRange->max) : _this->bandwidths[_this->bwId], NULL);
             }
             if (_this->selectedSerial != "") {
                 config.acquire();
@@ -483,9 +488,10 @@ private:
         }
 
         // General config BS
-        ImGui::LeftLabel("Gain control mode");
-        ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-        if (ImGui::Combo(CONCAT("##_balderf_gm_sel_", _this->name), &_this->gainMode, _this->gainModesTxt.c_str()) && _this->selectedSerial != "") {
+        SmGui::LeftLabel("Gain control mode");
+        SmGui::FillWidth();
+        SmGui::ForceSync();
+        if (SmGui::Combo(CONCAT("##_balderf_gm_sel_", _this->name), &_this->gainMode, _this->gainModesTxt.c_str()) && _this->selectedSerial != "") {
             if (_this->running) {
                 bladerf_set_gain_mode(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->gainModes[_this->gainMode].mode);
             }
@@ -500,10 +506,12 @@ private:
             }
         }
 
-        if (_this->selectedSerial != "") { if (_this->gainModes[_this->gainMode].mode != BLADERF_GAIN_MANUAL) { style::beginDisabled(); } }
-        ImGui::LeftLabel("Gain");
-        ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-        if (ImGui::SliderInt("##_balderf_oag_sel_", &_this->overallGain, (_this->gainRange != NULL) ? _this->gainRange->min : 0, (_this->gainRange != NULL) ? _this->gainRange->max : 60)) {
+        if (_this->selectedSerial != "") {
+            if (_this->gainModes[_this->gainMode].mode != BLADERF_GAIN_MANUAL) { SmGui::BeginDisabled(); }
+        }
+        SmGui::LeftLabel("Gain");
+        SmGui::FillWidth();
+        if (SmGui::SliderInt("##_balderf_oag_sel_", &_this->overallGain, (_this->gainRange != NULL) ? _this->gainRange->min : 0, (_this->gainRange != NULL) ? _this->gainRange->max : 60)) {
             if (_this->running) {
                 spdlog::info("Setting gain to {0}", _this->overallGain);
                 bladerf_set_gain(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->overallGain);
@@ -514,10 +522,12 @@ private:
                 config.release(true);
             }
         }
-        if (_this->selectedSerial != "") { if (_this->gainModes[_this->gainMode].mode != BLADERF_GAIN_MANUAL) { style::endDisabled(); } }
+        if (_this->selectedSerial != "") {
+            if (_this->gainModes[_this->gainMode].mode != BLADERF_GAIN_MANUAL) { SmGui::EndDisabled(); }
+        }
 
         if (_this->selectedBladeType == BLADERF_TYPE_V2) {
-            if (ImGui::Checkbox("Bias-T##_balderf_biast_", &_this->biasT)) {
+            if (SmGui::Checkbox("Bias-T##_balderf_biast_", &_this->biasT)) {
                 if (_this->running) {
                     bladerf_set_bias_tee(_this->openDev, BLADERF_CHANNEL_RX(_this->chanId), _this->biasT);
                 }
@@ -526,13 +536,12 @@ private:
                 config.release(true);
             }
         }
-
     }
 
     void worker() {
         int16_t* buffer = new int16_t[bufferSize * 2];
         bladerf_metadata meta;
-        
+
         while (streamingEnabled) {
             // Receive from the stream and break on error
             int ret = bladerf_sync_rx(openDev, buffer, bufferSize, &meta, 3500);
@@ -600,7 +609,7 @@ MOD_EXPORT void _INIT_() {
     json def = json({});
     def["devices"] = json({});
     def["device"] = "";
-    config.setPath(options::opts.root + "/bladerf_config.json");
+    config.setPath(core::args["root"].s() + "/bladerf_config.json");
     config.load(def);
     config.enableAutoSave();
 }

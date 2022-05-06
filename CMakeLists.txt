@@ -7,6 +7,20 @@ else()
     set(CMAKE_INSTALL_PREFIX "/usr")
 endif()
 
+# Configure toolchain for android
+if (ANDROID)
+    set(CMAKE_SHARED_LINKER_FLAGS
+        "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate"
+    )
+    set(CMAKE_C_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=c++17")
+endif (ANDROID)
+
+# Backends
+option(OPT_BACKEND_GLFW "Use the GLFW backend" ON)
+option(OPT_BACKEND_ANDROID "Use the Android backend" OFF)
+
 # Compatibility Options
 option(OPT_OVERRIDE_STD_FILESYSTEM "Use a local version of std::filesystem on systems that don't have it yet" OFF)
 
@@ -18,6 +32,8 @@ option(OPT_BUILD_FILE_SOURCE "Wav file source" ON)
 option(OPT_BUILD_HACKRF_SOURCE "Build HackRF Source Module (Dependencies: libhackrf)" ON)
 option(OPT_BUILD_LIMESDR_SOURCE "Build LimeSDR Source Module (Dependencies: liblimesuite)" OFF)
 option(OPT_BUILD_SDDC_SOURCE "Build SDDC Source Module (Dependencies: libusb-1.0)" OFF)
+option(OPT_BUILD_SDRPP_SERVER_SOURCE "Build SDR++ Server Source Module (no dependencies required)" ON)
+option(OPT_BUILD_RFSPACE_SOURCE "Build RFspace Source Module (no dependencies required)" ON)
 option(OPT_BUILD_RTL_SDR_SOURCE "Build RTL-SDR Source Module (Dependencies: librtlsdr)" ON)
 option(OPT_BUILD_RTL_TCP_SOURCE "Build RTL-TCP Source Module (no dependencies required)" ON)
 option(OPT_BUILD_SDRPLAY_SOURCE "Build SDRplay Source Module (Dependencies: libsdrplay)" OFF)
@@ -26,6 +42,7 @@ option(OPT_BUILD_SPYSERVER_SOURCE "Build SpyServer Source Module (no dependencie
 option(OPT_BUILD_PLUTOSDR_SOURCE "Build PlutoSDR Source Module (Dependencies: libiio, libad9361)" ON)
 
 # Sinks
+option(OPT_BUILD_ANDROID_AUDIO_SINK "Build Android Audio Sink Module (Dependencies: AAudio, only for android)" OFF)
 option(OPT_BUILD_AUDIO_SINK "Build Audio Sink Module (Dependencies: rtaudio)" ON)
 option(OPT_BUILD_PORTAUDIO_SINK "Build PortAudio Sink Module (Dependencies: portaudio)" OFF)
 option(OPT_BUILD_NETWORK_SINK "Build Audio Sink Module (no dependencies required)" ON)
@@ -33,19 +50,23 @@ option(OPT_BUILD_NEW_PORTAUDIO_SINK "Build the new PortAudio Sink Module (Depend
 
 # Decoders
 option(OPT_BUILD_FALCON9_DECODER "Build the falcon9 live decoder (Dependencies: ffplay)" OFF)
+option(OPT_BUILD_KG_SSTV_DECODER "Build the M17 decoder module (no dependencies required)" OFF)
 option(OPT_BUILD_M17_DECODER "Build the M17 decoder module (no dependencies required)" OFF)
 option(OPT_BUILD_METEOR_DEMODULATOR "Build the meteor demodulator module (no dependencies required)" ON)
 option(OPT_BUILD_RADIO "Main audio modulation decoder (AM, FM, SSB, etc...)" ON)
-option(OPT_BUILD_WEATHER_SAT_DECODER "Build the HRPT decoder module (no dependencies required)" ON)
+option(OPT_BUILD_WEATHER_SAT_DECODER "Build the HRPT decoder module (no dependencies required)" OFF)
 
 # Misc
 option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" ON)
 option(OPT_BUILD_FREQUENCY_MANAGER "Build the Frequency Manager module" ON)
 option(OPT_BUILD_RECORDER "Audio and baseband recorder" ON)
 option(OPT_BUILD_RIGCTL_SERVER "Rigctl backend for controlling SDR++ with software like gpredict" ON)
+option(OPT_BUILD_SCANNER "Frequency scanner" OFF)
+option(OPT_BUILD_SCHEDULER "Build the scheduler" OFF)
 
 # Other options
-option(USE_INTERNAL_LIBCORRECT "Use an external version of libcorrect" ON)
+option(USE_INTERNAL_LIBCORRECT "Use an internal version of libcorrect" ON)
+option(USE_BUNDLE_DEFAULTS "Set the default resource and module directories to the right ones for a MacOS .app" OFF)
 
 # Core of SDR++
 add_subdirectory("core")
@@ -79,6 +100,14 @@ if (OPT_BUILD_SDDC_SOURCE)
 add_subdirectory("source_modules/sddc_source")
 endif (OPT_BUILD_SDDC_SOURCE)
 
+if (OPT_BUILD_SDRPP_SERVER_SOURCE)
+add_subdirectory("source_modules/sdrpp_server_source")
+endif (OPT_BUILD_SDRPP_SERVER_SOURCE)
+
+if (OPT_BUILD_RFSPACE_SOURCE)
+add_subdirectory("source_modules/rfspace_source")
+endif (OPT_BUILD_RFSPACE_SOURCE)
+
 if (OPT_BUILD_RTL_SDR_SOURCE)
 add_subdirectory("source_modules/rtl_sdr_source")
 endif (OPT_BUILD_RTL_SDR_SOURCE)
@@ -105,6 +134,10 @@ endif (OPT_BUILD_PLUTOSDR_SOURCE)
 
 
 # Sink modules
+if (OPT_BUILD_ANDROID_AUDIO_SINK)
+add_subdirectory("sink_modules/android_audio_sink")
+endif (OPT_BUILD_ANDROID_AUDIO_SINK)
+
 if (OPT_BUILD_AUDIO_SINK)
 add_subdirectory("sink_modules/audio_sink")
 endif (OPT_BUILD_AUDIO_SINK)
@@ -126,6 +159,10 @@ endif (OPT_BUILD_NEW_PORTAUDIO_SINK)
 if (OPT_BUILD_FALCON9_DECODER)
 add_subdirectory("decoder_modules/falcon9_decoder")
 endif (OPT_BUILD_FALCON9_DECODER)
+
+if (OPT_BUILD_KG_SSTV_DECODER)
+add_subdirectory("decoder_modules/kg_sstv_decoder")
+endif (OPT_BUILD_KG_SSTV_DECODER)
 
 if (OPT_BUILD_M17_DECODER)
 add_subdirectory("decoder_modules/m17_decoder")
@@ -160,6 +197,14 @@ endif (OPT_BUILD_RECORDER)
 if (OPT_BUILD_RIGCTL_SERVER)
 add_subdirectory("misc_modules/rigctl_server")
 endif (OPT_BUILD_RIGCTL_SERVER)
+
+if (OPT_BUILD_SCANNER)
+add_subdirectory("misc_modules/scanner")
+endif (OPT_BUILD_SCANNER)
+
+if (OPT_BUILD_SCHEDULER)
+add_subdirectory("misc_modules/scheduler")
+endif (OPT_BUILD_SCHEDULER)
 
 add_executable(sdrpp "src/main.cpp" "win32/resources.rc")
 target_link_libraries(sdrpp PRIVATE sdrpp_core)
@@ -198,7 +243,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_custom_target(do_always ALL cp \"$<TARGET_FILE_DIR:sdrpp_core>/libsdrpp_core.dylib\" \"$<TARGET_FILE_DIR:sdrpp>\")
 endif ()
 
-# cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON
+# cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_SCANNER=ON -DOPT_BUILD_SCHEDULER=ON
 
 # Install directives
 install(TARGETS sdrpp DESTINATION bin)
@@ -210,7 +255,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/root/res/themes DESTINATION share/sdrpp)
 configure_file(${CMAKE_SOURCE_DIR}/sdrpp.desktop ${CMAKE_CURRENT_BINARY_DIR}/sdrpp.desktop @ONLY)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp.desktop DESTINATION /usr/share/applications)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp.desktop DESTINATION share/applications)
 endif ()
 
 # Create uninstall target

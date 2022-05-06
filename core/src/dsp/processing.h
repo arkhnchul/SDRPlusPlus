@@ -82,7 +82,6 @@ namespace dsp {
         lv_32fc_t phaseDelta;
         lv_32fc_t phase;
         stream<complex_t>* _in;
-
     };
 
     class AGC : public generic_block<AGC> {
@@ -155,7 +154,6 @@ namespace dsp {
         float _CorrectedFallRate;
         float _sampleRate;
         stream<float>* _in;
-
     };
 
     class ComplexAGC : public generic_block<ComplexAGC> {
@@ -223,9 +221,8 @@ namespace dsp {
         float _setPoint = 1.0f;
         float _maxGain = 10e4;
         float _rate = 10e-4;
-        
-        stream<complex_t>* _in;
 
+        stream<complex_t>* _in;
     };
 
     class DelayImag : public generic_block<DelayImag> {
@@ -273,9 +270,7 @@ namespace dsp {
     private:
         float lastIm = 0.0f;
         stream<complex_t>* _in;
-
     };
-
 
 
     template <class T>
@@ -288,6 +283,7 @@ namespace dsp {
         void init(stream<T>* in, float volume) {
             _in = in;
             _volume = volume;
+            level = powf(_volume, 2);
             generic_block<Volume<T>>::registerInput(_in);
             generic_block<Volume<T>>::registerOutput(&out);
             generic_block<Volume<T>>::_block_init = true;
@@ -357,7 +353,6 @@ namespace dsp {
         float _volume = 1.0f;
         bool _muted = false;
         stream<T>* _in;
-
     };
 
     class Squelch : public generic_block<Squelch> {
@@ -420,7 +415,7 @@ namespace dsp {
 
             _in->flush();
             if (!out.swap(count)) { return -1; }
-            return count; 
+            return count;
         }
 
         stream<complex_t> out;
@@ -430,7 +425,6 @@ namespace dsp {
         float* normBuffer;
         float _level = -50.0f;
         stream<complex_t>* _in;
-
     };
 
     template <class T>
@@ -486,7 +480,7 @@ namespace dsp {
             }
 
             _in->flush();
-            
+
             return count;
         }
 
@@ -496,7 +490,6 @@ namespace dsp {
         int samples = 1;
         int read = 0;
         stream<T>* _in;
-
     };
 
     class Threshold : public generic_block<Threshold> {
@@ -550,7 +543,7 @@ namespace dsp {
 
             _in->flush();
             if (!out.swap(count)) { return -1; }
-            return count; 
+            return count;
         }
 
         stream<uint8_t> out;
@@ -560,7 +553,6 @@ namespace dsp {
         float* normBuffer;
         float _level = -50.0f;
         stream<float>* _in;
-
     };
 
     class BFMPilotToStereo : public generic_block<BFMPilotToStereo> {
@@ -613,6 +605,5 @@ namespace dsp {
         stream<complex_t>* _in;
 
         complex_t* buffer;
-
     };
 }

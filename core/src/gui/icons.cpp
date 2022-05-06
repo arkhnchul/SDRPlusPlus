@@ -1,8 +1,6 @@
 #include <gui/icons.h>
 #include <stdint.h>
-#include <GL/glew.h>
 #include <config.h>
-#include <options.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <imgui/stb_image.h>
@@ -20,7 +18,7 @@ namespace icons {
     ImTextureID CENTER_TUNING;
 
     GLuint loadTexture(std::string path) {
-        int w,h,n;
+        int w, h, n;
         stbi_uc* data = stbi_load(path.c_str(), &w, &h, &n, 0);
         GLuint texId;
         glGenTextures(1, &texId);
