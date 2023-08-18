@@ -12,6 +12,7 @@ namespace sdrpp_credits {
         "Howard0su",
         "John Donkersley",
         "Joshua Kimsey",
+        "Manawyrm",
         "Martin Hauke",
         "Marvin Sinister",
         "Maxime Biette",
@@ -21,7 +22,7 @@ namespace sdrpp_credits {
         "Shuyuan Liu",
         "Syne Ardwin (WI9SYN)",
         "Szymon Zakrent",
-        "Tobias Mädel",
+        "Youssef Touil",
         "Zimm"
     };
 
@@ -30,14 +31,15 @@ namespace sdrpp_credits {
         "fftw3 (fftw.org)",
         "glfw (Camilla Löwy)",
         "json (nlohmann)",
-        "spdlog (gabime)",
         "Portable File Dialogs"
     };
 
     const char* hardwareDonators[] = {
+        "Aaronia AG",
         "Airspy",
         "Analog Devices",
         "CaribouLabs",
+        "Ettus Research",
         "Howard Su",
         "MyriadRF",
         "Nuand",
@@ -53,24 +55,33 @@ namespace sdrpp_credits {
         "Dale L Puckett (K0HYD)",
         "Daniele D'Agnelli",
         "D. Jones",
+        "Dexruus",
         "EB3FRN",
         "Eric Johnson",
         "Ernest Murphy (NH7L)",
         "Flinger Films",
+        "Frank Werner (HB9FXQ)",
         "gringogrigio",
+        "Jeff Moe",
         "Joe Cupano",
+        "KD1SQ",
         "Kezza",
         "Krys Kamieniecki",
         "Lee Donaghy",
         "Lee KD1SQ",
         ".lozenge. (Hank Hill)",
+        "Martin Herren (HB9FXX)",
         "ON4MU",
         "Passion-Radio.com",
         "Paul Maine",
+        "Peter Betz",
         "Scanner School",
+        "Scott Palmer",
         "SignalsEverywhere",
         "Syne Ardwin (WI9SYN)",
         "W4IPA",
+        "William Arcand (W1WRA)",
+        "Yves Rougy",
         "Zipper"
     };
 

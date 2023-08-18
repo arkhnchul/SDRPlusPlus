@@ -8,10 +8,10 @@
 #include <signal_path/signal_path.h>
 #include <gui/style.h>
 #include <utils/optionlist.h>
+#include <algorithm>
 
 namespace displaymenu {
     bool showWaterfall;
-    bool fastFFT = true;
     bool fullWaterfallUpdate = true;
     int colorMapId = 0;
     std::vector<std::string> colorMapNames;
@@ -23,6 +23,10 @@ namespace displaymenu {
     bool restartRequired = false;
     bool fftHold = false;
     int fftHoldSpeed = 60;
+    bool fftSmoothing = false;
+    int fftSmoothingSpeed = 100;
+    bool snrSmoothing = false;
+    int snrSmoothingSpeed = 20;
 
     OptionList<float, float> uiScales;
 
@@ -52,8 +56,16 @@ namespace displaymenu {
 
     int fftSizeId = 0;
 
-    void updateFFTHoldSpeed() {
-        gui::waterfall.setFFTHoldSpeed(fftHoldSpeed / (fftRate * 10.0f));
+    const IQFrontEnd::FFTWindow fftWindowList[] = {
+        IQFrontEnd::FFTWindow::RECTANGULAR,
+        IQFrontEnd::FFTWindow::BLACKMAN,
+        IQFrontEnd::FFTWindow::NUTTALL
+    };
+
+    void updateFFTSpeeds() {
+        gui::waterfall.setFFTHoldSpeed((float)fftHoldSpeed / ((float)fftRate * 10.0f));
+        gui::waterfall.setFFTSmoothingSpeed(std::min<float>((float)fftSmoothingSpeed / (float)(fftRate * 10.0f), 1.0f));
+        gui::waterfall.setSNRSmoothingSpeed(std::min<float>((float)snrSmoothingSpeed / (float)(fftRate * 10.0f), 1.0f));
     }
 
     void init() {
@@ -75,9 +87,6 @@ namespace displaymenu {
             }
         }
 
-        fastFFT = core::configManager.conf["fastFFT"];
-        gui::waterfall.setFastFFT(fastFFT);
-
         fullWaterfallUpdate = core::configManager.conf["fullWaterfallUpdate"];
         gui::waterfall.setFullWaterfallUpdate(fullWaterfallUpdate);
 
@@ -89,20 +98,26 @@ namespace displaymenu {
                 break;
             }
         }
-        gui::mainWindow.setFFTSize(FFTSizes[fftSizeId]);
+        sigpath::iqFrontEnd.setFFTSize(FFTSizes[fftSizeId]);
 
         fftRate = core::configManager.conf["fftRate"];
-        sigpath::signalPath.setFFTRate(fftRate);
+        sigpath::iqFrontEnd.setFFTRate(fftRate);
 
-        selectedWindow = std::clamp<int>((int)core::configManager.conf["fftWindow"], 0, _FFT_WINDOW_COUNT - 1);
-        gui::mainWindow.setFFTWindow(selectedWindow);
+        selectedWindow = std::clamp<int>((int)core::configManager.conf["fftWindow"], 0, (sizeof(fftWindowList) / sizeof(IQFrontEnd::FFTWindow)) - 1);
+        sigpath::iqFrontEnd.setFFTWindow(fftWindowList[selectedWindow]);
 
         gui::menu.locked = core::configManager.conf["lockMenuOrder"];
 
         fftHold = core::configManager.conf["fftHold"];
         fftHoldSpeed = core::configManager.conf["fftHoldSpeed"];
         gui::waterfall.setFFTHold(fftHold);
-        updateFFTHoldSpeed();
+        fftSmoothing = core::configManager.conf["fftSmoothing"];
+        fftSmoothingSpeed = core::configManager.conf["fftSmoothingSpeed"];
+        gui::waterfall.setFFTSmoothing(fftSmoothing);
+        snrSmoothing = core::configManager.conf["snrSmoothing"];
+        snrSmoothingSpeed = core::configManager.conf["snrSmoothingSpeed"];
+        gui::waterfall.setSNRSmoothing(snrSmoothing);
+        updateFFTSpeeds();
 
         // Define and load UI scales
         uiScales.define(1.0f, "100%", 1.0f);
@@ -120,13 +135,6 @@ namespace displaymenu {
             showWaterfall ? gui::waterfall.showWaterfall() : gui::waterfall.hideWaterfall();
             core::configManager.acquire();
             core::configManager.conf["showWaterfall"] = showWaterfall;
-            core::configManager.release(true);
-        }
-
-        if (ImGui::Checkbox("Fast FFT##_sdrpp", &fastFFT)) {
-            gui::waterfall.setFastFFT(fastFFT);
-            core::configManager.acquire();
-            core::configManager.conf["fastFFT"] = fastFFT;
             core::configManager.release(true);
         }
 
@@ -149,13 +157,44 @@ namespace displaymenu {
             core::configManager.conf["fftHold"] = fftHold;
             core::configManager.release(true);
         }
-
-        ImGui::LeftLabel("FFT Hold Speed");
+        ImGui::SameLine();
         ImGui::FillWidth();
         if (ImGui::InputInt("##sdrpp_fft_hold_speed", &fftHoldSpeed)) {
-            updateFFTHoldSpeed();
+            updateFFTSpeeds();
             core::configManager.acquire();
             core::configManager.conf["fftHoldSpeed"] = fftHoldSpeed;
+            core::configManager.release(true);
+        }
+
+        if (ImGui::Checkbox("FFT Smoothing##_sdrpp", &fftSmoothing)) {
+            gui::waterfall.setFFTSmoothing(fftSmoothing);
+            core::configManager.acquire();
+            core::configManager.conf["fftSmoothing"] = fftSmoothing;
+            core::configManager.release(true);
+        }
+        ImGui::SameLine();
+        ImGui::FillWidth();
+        if (ImGui::InputInt("##sdrpp_fft_smoothing_speed", &fftSmoothingSpeed)) {
+            fftSmoothingSpeed = std::max<int>(fftSmoothingSpeed, 1);
+            updateFFTSpeeds();
+            core::configManager.acquire();
+            core::configManager.conf["fftSmoothingSpeed"] = fftSmoothingSpeed;
+            core::configManager.release(true);
+        }
+
+        if (ImGui::Checkbox("SNR Smoothing##_sdrpp", &snrSmoothing)) {
+            gui::waterfall.setSNRSmoothing(snrSmoothing);
+            core::configManager.acquire();
+            core::configManager.conf["snrSmoothing"] = snrSmoothing;
+            core::configManager.release(true);
+        }
+        ImGui::SameLine();
+        ImGui::FillWidth();
+        if (ImGui::InputInt("##sdrpp_snr_smoothing_speed", &snrSmoothingSpeed)) {
+            snrSmoothingSpeed = std::max<int>(snrSmoothingSpeed, 1);
+            updateFFTSpeeds();
+            core::configManager.acquire();
+            core::configManager.conf["snrSmoothingSpeed"] = snrSmoothingSpeed;
             core::configManager.release(true);
         }
 
@@ -172,8 +211,8 @@ namespace displaymenu {
         ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
         if (ImGui::InputInt("##sdrpp_fft_rate", &fftRate, 1, 10)) {
             fftRate = std::max<int>(1, fftRate);
-            sigpath::signalPath.setFFTRate(fftRate);
-            updateFFTHoldSpeed();
+            sigpath::iqFrontEnd.setFFTRate(fftRate);
+            updateFFTSpeeds();
             core::configManager.acquire();
             core::configManager.conf["fftRate"] = fftRate;
             core::configManager.release(true);
@@ -182,7 +221,7 @@ namespace displaymenu {
         ImGui::LeftLabel("FFT Size");
         ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
         if (ImGui::Combo("##sdrpp_fft_size", &fftSizeId, FFTSizesStr)) {
-            gui::mainWindow.setFFTSize(FFTSizes[fftSizeId]);
+            sigpath::iqFrontEnd.setFFTSize(FFTSizes[fftSizeId]);
             core::configManager.acquire();
             core::configManager.conf["fftSize"] = FFTSizes[fftSizeId];
             core::configManager.release(true);
@@ -190,8 +229,8 @@ namespace displaymenu {
 
         ImGui::LeftLabel("FFT Window");
         ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-        if (ImGui::Combo("##sdrpp_fft_window", &selectedWindow, "Rectangular\0Blackman\0")) {
-            gui::mainWindow.setFFTWindow(selectedWindow);
+        if (ImGui::Combo("##sdrpp_fft_window", &selectedWindow, "Rectangular\0Blackman\0Nuttall\0")) {
+            sigpath::iqFrontEnd.setFFTWindow(fftWindowList[selectedWindow]);
             core::configManager.acquire();
             core::configManager.conf["fftWindow"] = selectedWindow;
             core::configManager.release(true);
